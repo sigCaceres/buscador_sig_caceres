@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/plugins/buscador_sig_caceres" >
+        <file>iconos/busqueda.png</file>
+		<file>iconos/logo-ayto.png</file>
+		<file>iconos/logo-sig.png</file>
+		<file>iconos/zoom.png</file>
+		<file>iconos/clean.png</file>
+    </qresource>
+</RCC>
