@@ -13,8 +13,8 @@ email=sig.caceres@ayto-caceres.es
 about=Buscador SIG de Cáceres. Permite realizar búsquedas por:
       Barrios, calles, caminos, carreteras, toponimia,...
 
-tracker=https://sig.caceres.es/
-repository=https://sig.caceres.es/
+tracker=https://github.com/sigCaceres/buscador_sig_caceres/
+repository=https://github.com/sigCaceres/buscador_sig_caceres/
 # End of mandatory metadata
 
 # Recommended items:
