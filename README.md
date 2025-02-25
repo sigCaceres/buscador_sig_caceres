@@ -4,7 +4,7 @@
 Aplicación que permite realizar búsquedas sobre diferentes capas del SIG de Cáceres
 
 
-![Iconos]([buscador_sig_caceres/doc/presentacion.png at develop · sigCaceres/buscador_sig_caceres](https://github.com/sigCaceres/buscador_sig_caceres/blob/develop/doc/presentacion.png))
+![Iconos](https://github.com/sigCaceres/buscador_sig_caceres/blob/develop/doc/presentacion.png)
 
 ## Características:
 Permite búsquedas por:
