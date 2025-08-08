@@ -6,7 +6,7 @@
 name=Buscador Sig Caceres
 qgisMinimumVersion=3.0
 description=Buscador de SIG Cáceres
-version=0.1
+version=0.15
 author=SIG de Cáceres
 email=sig.caceres@ayto-caceres.es
 
