@@ -317,7 +317,7 @@ class buscador_sig_caceres:
             self.buscador_calle_dialog = SigCaceresBusquedaCalle(self)
             self.buscador_calle_dialog.setWindowFlags(Qt.WindowStaysOnTopHint)
             self.buscador_calle_dialog.rejected.connect(self.cerrar_calle)
-            self.buscador_calle_dialog.run()
+            self.buscador_calle_dialog.exec_()
         else:
             if self.buscador_calle_dialog.windowState() == Qt.WindowMinimized:
                 self.buscador_calle_dialog.setWindowState(Qt.WindowNoState)
@@ -499,3 +499,5 @@ class buscador_sig_caceres:
         result = self.dlg.exec_()
         if result:
             pass
+
+ 

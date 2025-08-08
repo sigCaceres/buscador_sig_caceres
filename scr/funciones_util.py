@@ -166,40 +166,52 @@ def remove_items(canvas, vertex_items):
         except Exception as e:
             print(f"Error al eliminar el elemento: {e}")
 
+# -*- coding: utf-8 -*-
+from qgis.core import QgsRectangle, QgsProject, QgsPointXY
+from qgis.gui import QgsVertexMarker
+from PyQt5.QtGui import QColor
+from qgis.utils import iface
+
 def zoom_extension(coord_x_pto, coord_y_pto, extension):
-    """
-    Funcion que realiza un zoom a un punto pasado como parametro
-    @param coord_x_pto:
-    @param coord_y_pto:
-    @param extension: extension del zoom
-    @return: nada
-    """
 
+
+    # Obtener el lienzo del mapa
     canvas = iface.mapCanvas()
-    # eliminar las marcar anteriores de zoom
 
-    eliminar_cruces_busqueda()
+    # Eliminar marcas anteriores, si esta función está definida en tu código
+    try:
+        eliminar_cruces_busqueda()
+    except NameError:
+        # En caso de que eliminar_cruces_busqueda no esté definida, no falla
+        pass
 
-    # convertir extension m a grados en caso de proyeccion geografia
+    # Ajustar la escala dependiendo del sistema de referencia de coordenadas (CRS)
     crs = QgsProject.instance().crs()
     if crs.isGeographic():
-        scale = extension / 111111
+        scale = extension / 111111  # Aproximadamente grados por metro
     else:
         scale = extension
 
-    rect = QgsRectangle(float(coord_x_pto) - scale, float(coord_y_pto) - scale,
-                        float(coord_x_pto) + scale,
-                        float(coord_y_pto) + scale)
+    # Crear el rectángulo de zoom
+    rect = QgsRectangle(
+        float(coord_x_pto) - scale,
+        float(coord_y_pto) - scale,
+        float(coord_x_pto) + scale,
+        float(coord_y_pto) + scale
+    )
     canvas.setExtent(rect)
 
-    # dibujar una cruz en la busqueda por coordenadas
-    m = QgsVertexMarker(canvas)
-    m.setCenter(QgsPointXY(coord_x_pto, coord_y_pto))
-    m.setColor(QColor(0, 255, 0))
-    m.setIconSize(10)
-    m.setIconType(QgsVertexMarker.ICON_X)  # or ICON_CROSS, ICON_X,ICON_BOX
-    m.setPenWidth(3)
+    # Añadir una marca en forma de cruz
+    marker = QgsVertexMarker(canvas)
+    marker.setCenter(QgsPointXY(float(coord_x_pto), float(coord_y_pto)))
+    marker.setColor(QColor(0, 255, 0))
+    marker.setIconSize(10)
+    marker.setIconType(QgsVertexMarker.ICON_X)
+    marker.setPenWidth(3)
+
+    # Refrescar el canvas
     canvas.refresh()
+
 
 
 def transform_coordenadas(epsg_source, coord_x, coord_y):

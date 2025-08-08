@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Modulo de busqueda por calle
-
-"""
 __author__ = "SIG Caceres"
 __copyright__ = "Copyright 2024, SIG Caceres"
 __credits__ = ["SIG Caceres"]
-
 __version__ = "1.1.0"
 __maintainer__ = "SIG Cáceres"
 __email__ = "https://sig.caceres.es/"
@@ -14,50 +9,38 @@ __status__ = "Production"
 
 import os
 import qgis
-from PyQt5 import QtGui
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QCompleter
-from PyQt5.QtGui import QColor
-from qgis.PyQt import uic
-from qgis.PyQt import QtWidgets, QtCore
-from PyQt5.QtWidgets import QMessageBox
-from qgis.PyQt.QtWidgets import *
-from qgis.PyQt.QtCore import *
-import requests
+from qgis.PyQt import uic, QtWidgets
+from PyQt5.QtWidgets import QHeaderView
+from PyQt5.QtCore import Qt
 import json
-
-# Initialize Qt resources from file resources.py
-
-from qgis.core import *  # No borrar
+from qgis.core import *
+from qgis.gui import QgsVertexMarker
 from scr.funciones_util import request_service_gis_caceres, add_items_to_table, warning_message, \
     select_row_table, zoom_extension, transform_coordinates, toggle_line_edits
 from scr.servicios_web import BUSCAR_CALLE_NOMBRE, BUSCAR_CALLE_CODIGO, BUSCAR_CALLE_NUMPOl_NOMBRE, \
-    BUSCAR_CALLE_NUMPOl_CODIGO, BUSCAR_NUMEROS_POLICIA_CODIGO_VIA_TODOS,  \
+    BUSCAR_CALLE_NUMPOl_CODIGO, BUSCAR_NUMEROS_POLICIA_CODIGO_VIA_TODOS, \
     POSICION_CODIGO_VIA, POSICION_NUMPOL_CODIGO_VIA
-from scr.mensajes import *
-
-from qgis.utils import *
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'sig_caceres_busqueda_calles.ui'))
 
-CABECERA_TABLA_CALLES = ("NOMBRE", "CÓDIGO")
-ANCHO_COLUMNAS_CALLES = (350, 100)
+CABECERA_TABLA_CALLES = ("TIPO VÍA", "NOMBRE", "NÚCLEO", "CÓDIGO")
+ANCHO_COLUMNAS_CALLES = (55, 325, 270, 53)
 
 
 class SigCaceresBusquedaCalle(QtWidgets.QDialog, FORM_CLASS):
     def __init__(self, parent_obj, parent=None):
-        """Constructor."""
         super(SigCaceresBusquedaCalle, self).__init__(parent)
-
         self.setupUi(self)
         self.canvas = qgis.utils.iface.mapCanvas()
+        self.marcador_actual = None
         self.__reset()
-
         self.parent_obj = parent_obj
         self.codigo_via = None
         self.num_pol = None
 
+        # Conexiones
         self.lineEdit_via.textChanged.connect(
             lambda: toggle_line_edits(line_edit_1=self.lineEdit_via, line_edit_2=self.lineEdit_codigo))
         self.lineEdit_codigo.textChanged.connect(
@@ -67,159 +50,81 @@ class SigCaceresBusquedaCalle(QtWidgets.QDialog, FORM_CLASS):
         self.tableWidget.clicked.connect(self.get_num_policia)
         self.pushButton_clean.clicked.connect(self.__reset)
         self.pushButton_zoom.clicked.connect(self.zoom)
+        self.pushButton_clear_marker.clicked.connect(self.__limpiar_marcadores_canvas)  # ← AÑADIDO
 
     def __reset(self):
+        self.__limpiar_marcadores_canvas()
         self.lineEdit_via.clear()
         self.lineEdit_codigo.clear()
         self.comboBox_num_pol.clear()
         self.comboBox_num_pol.setEnabled(False)
         self.tableWidget.clearSelection()
         self.tableWidget.clearContents()
-        self.tableWidget.clear()
         self.tableWidget.setRowCount(0)
-        self.tableWidget.setColumnCount(0)
-        self.tableWidget.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.tableWidget.setColumnCount(len(CABECERA_TABLA_CALLES))
+        self.tableWidget.setHorizontalHeaderLabels(CABECERA_TABLA_CALLES)
+
+        header = self.tableWidget.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(QHeaderView.Fixed)
+        for i, ancho in enumerate(ANCHO_COLUMNAS_CALLES):
+            self.tableWidget.setColumnWidth(i, ancho)
+
+        self.tableWidget.setMinimumHeight(30 * 10 + self.tableWidget.horizontalHeader().height() + 2)
+        total_width = sum(ANCHO_COLUMNAS_CALLES) + self.tableWidget.verticalHeader().width()
+        self.tableWidget.setMinimumWidth(total_width + 4)
+        self.tableWidget.setMaximumWidth(total_width + 4)
+
+        self.tableWidget.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
         self.pushButton_zoom.setEnabled(False)
 
-    def datos2list(self, datos):
-        """
-        Convertir respuesta en lista de datos
-        """
+    def __limpiar_marcadores_canvas(self):
+        if self.marcador_actual:
+            self.canvas.scene().removeItem(self.marcador_actual)
+            self.marcador_actual = None
+        self.canvas.refresh()
 
+    def datos2list(self, datos):
         data_dict = json.loads(datos)
         lista_datos = []
         for dat in data_dict:
-            if "nombreVia" in dat:
-                lista_datos.append((dat["nombreVia"], str(dat["codigovia"])))
-            else:
-                lista_datos.append((dat["nombrevia"], str(dat["codigovia"])))
+            tipo_via = dat.get("tipovia", "") or dat.get("tipoVia", "")
+            nombre = dat.get("nombrevia", "") or dat.get("nombreVia", "")
+            nucleo = dat.get("nucleo", "")
+            codigo = str(dat.get("codigovia", ""))
+            lista_datos.append((tipo_via, nombre, nucleo, codigo))
         return lista_datos
 
     def busqueda(self):
-        """
-        Realiza la busqueda de una calle,por nombre o codigo de via
-        @param text:
-        @return:
-        """
-        texto_nombre = self.lineEdit_via.text()
-        texto_codigo = self.lineEdit_codigo.text()
-        response, value = 1, []
+        self.__limpiar_marcadores_canvas()
+        texto_nombre = self.lineEdit_via.text().strip()
+        texto_codigo = self.lineEdit_codigo.text().strip()
 
-        if texto_nombre not in (None, '') and texto_codigo in (None, ''):
-            url_nombre = BUSCAR_CALLE_NOMBRE + f'{texto_nombre}'
-            url_numpol = BUSCAR_CALLE_NUMPOl_NOMBRE + f'{texto_nombre}'
-
-            response_nombre, value_nombre = request_service_gis_caceres(url=url_nombre)
-            response_numpol, value_numpol = request_service_gis_caceres(url=url_numpol)
-
-            if response_numpol == 0:
-                try:
-                    numpol_data = json.loads(value_numpol)
-                    unique_numpol = {}
-                    for numpol in numpol_data:
-                        key = (numpol.get("nombreVia"), numpol.get("codigovia"))
-                        if key not in unique_numpol:
-                            unique_numpol[key] = numpol
-                    value_numpol = json.dumps(list(unique_numpol.values()))
-                except Exception as e:
-                    print(f"Error procesando value_numpol: {e}")
-                    value_numpol = "[]"
-
-            if response_nombre == 0 and response_numpol == 0:
-                try:
-                    combined_data = []
-                    if response_nombre == 0:
-                        combined_data.extend(json.loads(value_nombre))
-                    if response_numpol == 0:
-                        combined_data.extend(json.loads(value_numpol))
-
-                    unique_combined = {}
-                    for record in combined_data:
-                        nombre = record.get("nombrevia") or record.get("nombreVia")
-                        codigo = record.get("codigovia")
-                        key = (nombre, codigo)
-                        if key not in unique_combined:
-                            unique_combined[key] = record
-                    response = 0
-                    value = json.dumps(list(unique_combined.values()))
-                except Exception as e:
-                    print(f"Error procesando combinación de datos: {e}")
-                    response = 1
-                    value = "[]"
-            elif response_nombre == 0:
-                response = 0
-                value = value_nombre
-            elif response_numpol == 0:
-                response = 0
-                value = value_numpol
-
-        elif texto_codigo not in (None, '') and texto_nombre in (None, ''):
-            url_codigo = BUSCAR_CALLE_CODIGO + f'{texto_codigo}'
-            url_numpol = BUSCAR_CALLE_NUMPOl_CODIGO + f'{texto_codigo}'
-
-            response_codigo, value_codigo = request_service_gis_caceres(url=url_codigo)
-            response_numpol, value_numpol = request_service_gis_caceres(url=url_numpol)
-
-            if response_numpol == 0:
-                try:
-                    numpol_data = json.loads(value_numpol)
-                    unique_numpol = {}
-                    for numpol in numpol_data:
-                        key = (numpol.get("nombreVia"), numpol.get("codigovia"))
-                        if key not in unique_numpol:
-                            unique_numpol[key] = numpol
-                    value_numpol = json.dumps(list(unique_numpol.values()))
-                except Exception as e:
-                    print(f"Error procesando value_numpol: {e}")
-                    value_numpol = "[]"
-
-            if response_codigo == 0 and response_numpol == 0:
-                try:
-                    combined_data = []
-                    if response_codigo == 0:
-                        combined_data.extend(json.loads(value_codigo))
-                    if response_numpol == 0:
-                        combined_data.extend(json.loads(value_numpol))
-
-                    unique_combined = {}
-                    for record in combined_data:
-                        nombre = record.get("nombrevia") or record.get("nombreVia")
-                        codigo = record.get("codigovia")
-                        key = (nombre, codigo)
-                        if key not in unique_combined:
-                            unique_combined[key] = record
-                    response = 0
-                    value = json.dumps(list(unique_combined.values()))
-                except Exception as e:
-                    print(f"Error procesando combinación de datos: {e}")
-                    response = 1
-                    value = "[]"
-            elif response_codigo == 0:
-                response = 0
-                value = value_codigo
-            elif response_numpol == 0:
-                response = 0
-                value = value_numpol
-
+        if texto_nombre:
+            url = BUSCAR_CALLE_NOMBRE + texto_nombre
+        elif texto_codigo:
+            url = BUSCAR_CALLE_CODIGO + texto_codigo
         else:
-            warning_message(header='Aviso', message='Introduzca un texto búsqueda')
-            return None
+            warning_message(header='Aviso', message='Debe introducir un nombre o código de vía')
+            return
 
-        if response == 0:
+        response, value = request_service_gis_caceres(url=url)
+
+        if response == 0 and value:
             datos = self.datos2list(datos=value)
-            add_items_to_table(_data=datos, _table=self.tableWidget, _header=CABECERA_TABLA_CALLES,
-                               _size_columns=ANCHO_COLUMNAS_CALLES, _tooltips=None, _align=None)
-        elif response == 1:
+            self.tableWidget.setRowCount(0)
+            for fila, fila_datos in enumerate(datos):
+                self.tableWidget.insertRow(fila)
+                for columna, valor in enumerate(fila_datos):
+                    item = QtWidgets.QTableWidgetItem(valor)
+                    self.tableWidget.setItem(fila, columna, item)
+        else:
             warning_message(header='Aviso', message='No hay coincidencias en la búsqueda')
 
     def get_num_policia(self):
-        """
-        Obtiene los num de policia de la calle y los carga en el combo
-        """
         self.comboBox_num_pol.clear()
         self.comboBox_num_pol.setEnabled(True)
-
-        self.codigo_via = select_row_table(_table=self.tableWidget, _col=1)
+        self.codigo_via = select_row_table(_table=self.tableWidget, _col=3)
         url = BUSCAR_NUMEROS_POLICIA_CODIGO_VIA_TODOS + f'{self.codigo_via}'
         response, value = request_service_gis_caceres(url=url)
         data_dict = json.loads(value)
@@ -232,31 +137,16 @@ class SigCaceresBusquedaCalle(QtWidgets.QDialog, FORM_CLASS):
         self.pushButton_zoom.setEnabled(True)
 
     def zoom(self):
-        """
-        zoom al objeto
-        """
         if self.codigo_via:
             num_pol = self.comboBox_num_pol.currentText()
-            if num_pol not in ('', None):
+            if num_pol:
                 coordenada_x = self.num_pol[num_pol]['x']
                 coordenada_y = self.num_pol[num_pol]['y']
             else:
-
                 url = POSICION_CODIGO_VIA + f'{self.codigo_via}'
-                coor_x = 'centroWgs84X'
-                coor_y = 'centroWgs84Y'
-
                 response, value = request_service_gis_caceres(url=url)
-                data_dict = []
-                if response == 0:
-                    try:
-                        data_dict = json.loads(value)
-                    except Exception as e:
-                        warning_message(header='Error', message=f'Error procesando datos: {e}')
-                        return
-
-                if not data_dict or coor_x not in data_dict[0] or coor_y not in data_dict[0]:
-
+                data_dict = json.loads(value) if response == 0 else []
+                if not data_dict or 'centroWgs84X' not in data_dict[0]:
                     url_numpol = POSICION_NUMPOL_CODIGO_VIA + f'{self.codigo_via}'
                     response_numpol, value_numpol = request_service_gis_caceres(url=url_numpol)
                     if response_numpol == 0:
@@ -271,21 +161,28 @@ class SigCaceresBusquedaCalle(QtWidgets.QDialog, FORM_CLASS):
                         warning_message(header='Error', message='No se pudo obtener datos de numpol')
                         return
                 else:
-                    coordenada_x = data_dict[0][coor_x]
-                    coordenada_y = data_dict[0][coor_y]
+                    coordenada_x = data_dict[0]['centroWgs84X']
+                    coordenada_y = data_dict[0]['centroWgs84Y']
 
             project_crs = QgsProject.instance().crs().authid()
             crs_actual = str(project_crs).split(':')[-1]
             if crs_actual != '4326':
-                coordenada_x, coordenada_y = transform_coordinates(x=coordenada_x, y=coordenada_y,
-                                                                   source_crs='EPSG:4326', dest_crs=project_crs)
-            zoom_extension(coord_x_pto=coordenada_x, coord_y_pto=coordenada_y, extension=50)
+                coordenada_x, coordenada_y = transform_coordinates(
+                    x=coordenada_x, y=coordenada_y, source_crs='EPSG:4326', dest_crs=project_crs
+                )
+
+            self.__limpiar_marcadores_canvas()
+            self.marcador_actual = QgsVertexMarker(self.canvas)
+            self.marcador_actual.setCenter(QgsPointXY(coordenada_x, coordenada_y))
+            self.marcador_actual.setColor(Qt.green)
+            self.marcador_actual.setIconSize(12)
+            self.marcador_actual.setIconType(QgsVertexMarker.ICON_CROSS)
+            self.marcador_actual.setPenWidth(3)
+            self.canvas.setCenter(QgsPointXY(coordenada_x, coordenada_y))
+            self.canvas.zoomScale(1000)
         else:
             warning_message(header='Aviso', message='No hay calle seleccionada')
 
     def run(self):
-        """
-        Run
-        """
         self.show()
         self.exec_()

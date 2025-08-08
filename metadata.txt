@@ -6,15 +6,15 @@
 name=Buscador Sig Caceres
 qgisMinimumVersion=3.0
 description=Buscador de SIG Cáceres
-version=0.15
+version=0.2
 author=SIG de Cáceres
 email=sig.caceres@ayto-caceres.es
 
 about=Buscador SIG de Cáceres. Permite realizar búsquedas por:
       Barrios, calles, caminos, carreteras, toponimia,...
 
-tracker=https://github.com/sigCaceres/buscador_sig_caceres/
-repository=https://github.com/sigCaceres/buscador_sig_caceres/
+tracker=https://sig.caceres.es/
+repository=https://sig.caceres.es/
 # End of mandatory metadata
 
 # Recommended items:

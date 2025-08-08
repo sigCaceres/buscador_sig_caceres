@@ -6,14 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>510</width>
-    <height>486</height>
+    <width>740</width>
+    <height>615</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Búsqueda Calles</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <!-- CABECERA DE LOGOS -->
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -23,9 +24,6 @@
          <width>100</width>
          <height>50</height>
         </size>
-       </property>
-       <property name="text">
-        <string/>
        </property>
        <property name="pixmap">
         <pixmap>../../iconos/logo-sig.png</pixmap>
@@ -42,7 +40,7 @@
        </property>
        <property name="sizeHint" stdset="0">
         <size>
-         <width>40</width>
+         <width>55</width>
          <height>20</height>
         </size>
        </property>
@@ -56,9 +54,6 @@
          <height>50</height>
         </size>
        </property>
-       <property name="text">
-        <string/>
-       </property>
        <property name="pixmap">
         <pixmap>../../iconos/logo-ayto.png</pixmap>
        </property>
@@ -69,6 +64,8 @@
      </item>
     </layout>
    </item>
+
+   <!-- BÚSQUEDA DE CALLES -->
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
@@ -101,6 +98,8 @@
      </item>
     </layout>
    </item>
+
+   <!-- RESULTADOS -->
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
@@ -117,10 +116,19 @@
       </widget>
      </item>
      <item>
-      <widget class="QTableWidget" name="tableWidget"/>
+      <widget class="QTableWidget" name="tableWidget">
+       <property name="minimumSize">
+        <size>
+         <width>720</width>
+         <height>415</height>
+        </size>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
+
+   <!-- NÚMERO POLICÍA -->
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <property name="topMargin">
@@ -150,7 +158,7 @@
        </property>
        <property name="sizeHint" stdset="0">
         <size>
-         <width>40</width>
+         <width>55</width>
          <height>20</height>
         </size>
        </property>
@@ -158,6 +166,8 @@
      </item>
     </layout>
    </item>
+
+   <!-- BOTONES ZOOM, LIMPIAR Y QUITAR MARCA -->
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_5">
      <property name="topMargin">
@@ -170,7 +180,7 @@
        </property>
        <property name="sizeHint" stdset="0">
         <size>
-         <width>40</width>
+         <width>55</width>
          <height>20</height>
         </size>
        </property>
@@ -179,10 +189,7 @@
      <item>
       <widget class="QPushButton" name="pushButton_zoom">
        <property name="toolTip">
-        <string>Zoom </string>
-       </property>
-       <property name="text">
-        <string/>
+        <string>Zoom</string>
        </property>
        <property name="icon">
         <iconset>
@@ -201,12 +208,29 @@
        <property name="toolTip">
         <string>Limpiar</string>
        </property>
-       <property name="text">
-        <string/>
-       </property>
        <property name="icon">
         <iconset>
          <normaloff>../../iconos/clean.png</normaloff>../../iconos/clean.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>30</width>
+         <height>30</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_clear_marker">
+       <property name="toolTip">
+        <string>Quitar Marca</string>
+       </property>
+       <property name="text">
+        <string>Quitar Marca</string>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>../../iconos/delete.png</normaloff>../../iconos/delete.png</iconset>
        </property>
        <property name="iconSize">
         <size>
@@ -222,3 +246,4 @@
  </widget>
  <connections/>
 </ui>
+
